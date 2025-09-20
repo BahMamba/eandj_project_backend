@@ -42,8 +42,8 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Size(min = 8, max = 15, message = "Phone number must be between 8 and 15 characters")
-    @Column
+    @Size(min = 9, max = 13, message = "Phone number must be between 9 and 13 characters")
+    @Column(unique = true)
     private String phoneNumber;
 
     @Enumerated(EnumType.STRING)
