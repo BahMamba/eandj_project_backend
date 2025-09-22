@@ -20,15 +20,15 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class AuthService {
-    
+
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
 
-    // Login
+    // --- Login ---
     public LoginResponse login(LoginRequest request){
         Authentication authentication = authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(request.email(), request.password())
+                new UsernamePasswordAuthenticationToken(request.email(), request.password())
         );
 
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
@@ -37,30 +37,24 @@ public class AuthService {
         String refreshToken = jwtUtil.generateRefreshToken(userDetails);
 
         User user = userRepository.findByEmail(userDetails.getUsername())
-            .orElseThrow(() -> new RuntimeException("Utilisateur introuvable!"));
-        
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
         return new LoginResponse(jwtToken, refreshToken, user.getEmail(), user.getRole().name());
     }
 
-    // Profil User
+    // --- Profil de l'utilisateur ---
     public UserProfileResponse userProfile(){
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String email = authentication.getName();
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
 
         User user = userRepository.findByEmail(email)
-             .orElseThrow(() -> new RuntimeException("User not found"));
-        
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
         return new UserProfileResponse(user.getUsername(), user.getEmail(), user.getPhoneNumber(), user.getRole());
     }
 
-    // Refresh
+    // --- Refresh Token ---
     public RefreshTokenResponse refreshToken(String refreshToken) {
-        String email;
-        try {
-            email = jwtUtil.extractUsername(refreshToken);
-        } catch (Exception e) {
-            throw new RuntimeException("Refresh token invalide");
-        }
+        String email = jwtUtil.extractUsername(refreshToken);
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
@@ -72,12 +66,11 @@ public class AuthService {
                 .build();
 
         if (!jwtUtil.validateToken(refreshToken, userDetails)) {
-            throw new RuntimeException("Refresh token expiré ou invalide");
+            throw new RuntimeException("Refresh token invalide ou expiré");
         }
 
         String newAccessToken = jwtUtil.generateToken(userDetails);
 
         return new RefreshTokenResponse(newAccessToken, refreshToken);
     }
-
 }
