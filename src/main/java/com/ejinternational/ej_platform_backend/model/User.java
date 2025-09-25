@@ -36,6 +36,7 @@ public class User {
     @Column(unique = true)
     private String phoneNumber;
 
+    @Builder.Default
     @Column(nullable = false)
     private Boolean firstLogin = true;
 
