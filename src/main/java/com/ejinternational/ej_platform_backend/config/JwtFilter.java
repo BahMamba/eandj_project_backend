@@ -4,19 +4,17 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.ejinternational.ej_platform_backend.config.security.CustomUserDetailsService;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,16 +24,19 @@ import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 public class JwtFilter extends OncePerRequestFilter {
-    
+
+    private static final Logger log = LoggerFactory.getLogger(JwtFilter.class);
+
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService userDetailsService;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain)
             throws ServletException, IOException {
+
         String authHeader = request.getHeader("Authorization");
-        System.out.println("Requête: " + request.getRequestURI());
-        System.out.println("Authorization: " + authHeader);
 
         String token = null;
         String username = null;
@@ -44,57 +45,37 @@ public class JwtFilter extends OncePerRequestFilter {
             token = authHeader.substring(7);
             try {
                 username = jwtUtil.extractUsername(token);
-                System.out.println("Token: " + token);
-                System.out.println("Username: " + username);
             } catch (Exception e) {
-                System.out.println("Erreur extraction token: " + e.getMessage());
-                filterChain.doFilter(request, response);
-                return;
+                log.warn("Erreur extraction token: {}", e.getMessage());
             }
-        } else {
-            System.out.println("Aucun Authorization ou format incorrect");
         }
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                System.out.println("UserDetails: " + userDetails.getUsername() + ", rôles: " + userDetails.getAuthorities());
+
                 if (jwtUtil.validateToken(token, userDetails)) {
-                    Claims claims = Jwts.parser()
-                            .verifyWith(Keys.hmacShaKeyFor(jwtUtil.getSecret().getBytes()))
-                            .build()
-                            .parseSignedClaims(token)
-                            .getPayload();
-                    List<String> roles = (List<String>) claims.get("roles");
-                    System.out.println("Rôles token: " + roles);
-                    List<org.springframework.security.core.authority.SimpleGrantedAuthority> authorities = 
-                            roles != null 
-                                ? roles.stream().map(org.springframework.security.core.authority.SimpleGrantedAuthority::new).collect(Collectors.toList()) 
-                                : userDetails.getAuthorities().stream()
-                                      .map(auth -> new org.springframework.security.core.authority.SimpleGrantedAuthority(auth.getAuthority()))
-                                      .collect(Collectors.toList());
-                    System.out.println("Authorities: " + authorities);
-                    
+                    // Récupération des rôles directement depuis UserDetails
+                    List<String> roles = userDetails.getAuthorities().stream()
+                            .map(auth -> auth.getAuthority())
+                            .collect(Collectors.toList());
+
                     UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-                    System.out.println("Contexte défini pour: " + username);
-                } else {
-                    System.out.println("Token invalide pour: " + username);
+                    log.debug("Contexte défini pour {} avec rôles {}", username, roles);
                 }
-            } catch (UsernameNotFoundException e) {
-                System.out.println("Utilisateur non trouvé: " + e.getMessage());
-                filterChain.doFilter(request, response);
-                return;
             } catch (Exception e) {
-                System.out.println("Erreur inattendue: " + e.getMessage());
-                filterChain.doFilter(request, response);
-                return;
+                log.error("Erreur lors de l'authentification JWT: {}", e.getMessage());
             }
-        } else {
-            System.out.println("Aucun username ou authentification existante");
         }
+
         filterChain.doFilter(request, response);
     }
 }

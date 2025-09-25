@@ -2,61 +2,42 @@ package com.ejinternational.ej_platform_backend.model;
 
 import java.time.LocalDateTime;
 
-import com.ejinternational.ej_platform_backend.model.enums.RoleUser;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
+@Table(name = "territoires")
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 @Builder
-@Table(name = "users")
-public class User {
+public class Territoire {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank
-    @Column(nullable = false)
-    private String username;
-
-    @NotBlank
-    @Column(nullable = false)
-    private String password;
-
-    @Email
-    @NotBlank
     @Column(nullable = false, unique = true)
-    private String email;
+    private String nom;
 
-    @Size(min = 9, max = 13)
-    @Column(unique = true)
-    private String phoneNumber;
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String polygoneJson;
 
-    @Builder.Default
-    @Column(nullable = false)
-    private Boolean firstLogin = true;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private RoleUser role;
+    @OneToOne
+    @JoinColumn(name = "commercial_id", unique = true)
+    private User responsableTerritoire;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -75,3 +56,4 @@ public class User {
         this.updatedAt = LocalDateTime.now();
     }
 }
+
