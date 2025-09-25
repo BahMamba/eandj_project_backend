@@ -31,7 +31,8 @@ public class ManageService {
                 user.getUsername(),
                 user.getEmail(),
                 user.getPhoneNumber(),
-                user.getRole()
+                user.getRole(),
+                user.getFirstLogin()
         );
     }
 
@@ -52,6 +53,7 @@ public class ManageService {
                 .email(userDTO.email())
                 .phoneNumber(userDTO.phoneNumber())
                 .role(RoleUser.COMMERCIAL)
+                .firstLogin(true)
                 .password(encodedPassword)
                 .build();
 
@@ -116,34 +118,34 @@ public class ManageService {
 
 
     // Service : ManageService.java
-public UserResponseDTO firstLoginChange(Long userId, UserPasswordDTO dto) {
-    User user = userRepository.findById(userId)
-            .orElseThrow(() -> new RuntimeException("Utilisateur introuvable !"));
+    public UserResponseDTO firstLoginChange(Long userId, UserPasswordDTO dto) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable !"));
 
-    // Vérification que l'utilisateur est encore en first login
-    if (!user.getFirstLogin()) {
-        throw new IllegalStateException("Mot de passe déjà modifié, action interdite.");
+        // Vérification que l'utilisateur est encore en first login
+        if (!user.getFirstLogin()) {
+            throw new IllegalStateException("Mot de passe déjà modifié, action interdite.");
+        }
+
+        // Vérification du mot de passe temporaire
+        if (!passwordEncoder.matches(dto.oldPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("Mot de passe actuel incorrect");
+        }
+
+        // Vérification correspondance nouveau mot de passe
+        if (!dto.newPassword().equals(dto.confirmPassword())) {
+            throw new IllegalArgumentException("Le nouveau mot de passe et sa confirmation ne correspondent pas");
+        }
+
+        user.setPassword(passwordEncoder.encode(dto.newPassword()));
+
+        user.setFirstLogin(false);
+
+        userRepository.save(user);
+
+        emailService.sendPasswordChangedConfirmation(user.getEmail(), user.getUsername());
+
+        return mapToResponseDTO(user);
     }
-
-    // Vérification du mot de passe temporaire
-    if (!passwordEncoder.matches(dto.oldPassword(), user.getPassword())) {
-        throw new IllegalArgumentException("Mot de passe actuel incorrect");
-    }
-
-    // Vérification correspondance nouveau mot de passe
-    if (!dto.newPassword().equals(dto.confirmPassword())) {
-        throw new IllegalArgumentException("Le nouveau mot de passe et sa confirmation ne correspondent pas");
-    }
-
-    user.setPassword(passwordEncoder.encode(dto.newPassword()));
-
-    user.setFirstLogin(false);
-
-    userRepository.save(user);
-
-    emailService.sendPasswordChangedConfirmation(user.getEmail(), user.getUsername());
-
-    return mapToResponseDTO(user);
-}
 
 }

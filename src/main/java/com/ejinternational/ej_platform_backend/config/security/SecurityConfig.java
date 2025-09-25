@@ -28,22 +28,26 @@ import lombok.RequiredArgsConstructor;
 public class SecurityConfig {
     private final JwtFilter jwtFilter;
 
-
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception{
-        http
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        return http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/login", "/api/auth/refresh-token").permitAll()
+                .requestMatchers("/api/auth/profile", "/api/users/first-login").authenticated()
+                .requestMatchers("/api/users/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-        return http.build();
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((req, res, e) -> res.sendError(401, "Non autorisé"))
+                .accessDeniedHandler((req, res, e) -> res.sendError(403, "Accès interdit"))
+            )
+            .build();
     }
 
-    
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
@@ -53,11 +57,9 @@ public class SecurityConfig {
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
-
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {

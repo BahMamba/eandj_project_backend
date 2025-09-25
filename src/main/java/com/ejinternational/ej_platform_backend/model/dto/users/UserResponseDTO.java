@@ -7,5 +7,6 @@ public record UserResponseDTO(
     String username,
     String email,
     String phoneNumber,
-    RoleUser role
+    RoleUser role,
+    boolean firstLogin
 ) {}

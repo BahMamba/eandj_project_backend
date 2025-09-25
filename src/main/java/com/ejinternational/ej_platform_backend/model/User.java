@@ -39,7 +39,6 @@ public class User {
     @Column(nullable = false)
     private Boolean firstLogin = true;
 
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private RoleUser role;

@@ -25,8 +25,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
 
-    // --- Login ---
-    public LoginResponse login(LoginRequest request){
+    public LoginResponse login(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.email(), request.password())
         );
@@ -39,20 +38,24 @@ public class AuthService {
         User user = userRepository.findByEmail(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
 
-        return new LoginResponse(jwtToken, refreshToken, user.getEmail(), user.getRole().name());
+        return new LoginResponse(jwtToken, refreshToken, user.getEmail(), user.getRole().name(), user.getFirstLogin());
     }
 
-    // --- Profil de l'utilisateur ---
-    public UserProfileResponse userProfile(){
+    public UserProfileResponse userProfile() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
 
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+            .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
 
-        return new UserProfileResponse(user.getUsername(), user.getEmail(), user.getPhoneNumber(), user.getRole());
+        return new UserProfileResponse(
+            user.getUsername(),
+            user.getEmail(),
+            user.getPhoneNumber(),
+            user.getRole(),
+            user.getFirstLogin()
+        );
     }
 
-    // --- Refresh Token ---
     public RefreshTokenResponse refreshToken(String refreshToken) {
         String email = jwtUtil.extractUsername(refreshToken);
 
