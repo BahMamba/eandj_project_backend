@@ -1,5 +1,9 @@
 package com.ejinternational.ej_platform_backend.service;
 
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Polygon;
+import org.locationtech.jts.io.geojson.GeoJsonReader;
+import org.locationtech.jts.io.geojson.GeoJsonWriter;
 import org.springframework.stereotype.Service;
 
 import com.ejinternational.ej_platform_backend.model.Territoire;
@@ -19,12 +23,31 @@ public class TerritoireService {
     private final UserRepository userRepository;
     private final TerritoireRepository territoireRepository;
 
+    private final GeometryFactory geometryFactory = new GeometryFactory();
+
+    /** Convertit un Polygon -> GeoJSON String */
+    private String polygonToGeoJson(Polygon polygon) {
+        if (polygon == null) return null;
+        GeoJsonWriter writer = new GeoJsonWriter();
+        return writer.write(polygon);
+    }
+
+    /** Convertit un GeoJSON String -> Polygon */
+    private Polygon geoJsonToPolygon(String geoJson) {
+        try {
+            GeoJsonReader reader = new GeoJsonReader(geometryFactory);
+            return (Polygon) reader.read(geoJson);
+        } catch (Exception e) {
+            throw new RuntimeException("Format GeoJSON invalide", e);
+        }
+    }
+
     /* Mapping */
     private TerritoireResponseDTO mapResponseDTO(Territoire territoire){
         return new TerritoireResponseDTO(
             territoire.getId(),
             territoire.getNom(),
-            territoire.getPolygoneJson(),
+            polygonToGeoJson(territoire.getPolygone()), // ✅ conversion
             territoire.getResponsableTerritoire().getId(),
             territoire.getCreatedAt(),
             territoire.getUpdatedAt()
@@ -33,19 +56,18 @@ public class TerritoireService {
 
     // Ajout
     public TerritoireResponseDTO createTerritoire(TerritoireDTO dto){
-
         User commercial = userRepository.findById(dto.responsableId())
                 .orElseThrow(() -> new RuntimeException("Commercial introuvable"));
 
         if (territoireRepository.existsByResponsableTerritoireId(dto.responsableId())) {
-            throw new IllegalStateException("Ce commercial est déjà assigner a un territoire");
+            throw new IllegalStateException("Ce commercial est déjà assigné à un territoire");
         }
 
         Territoire territoire = Territoire.builder()
-                    .nom(dto.nom())
-                    .polygoneJson(dto.polygoneJson())
-                    .responsableTerritoire(commercial)
-                    .build();
+                .nom(dto.nom())
+                .polygone(geoJsonToPolygon(dto.polygoneJson())) // ✅ conversion
+                .responsableTerritoire(commercial)
+                .build();
 
         territoire = territoireRepository.save(territoire);
         return mapResponseDTO(territoire);
@@ -61,11 +83,11 @@ public class TerritoireService {
 
         if (!territoire.getResponsableTerritoire().getId().equals(dto.responsableId()) &&
             territoireRepository.existsByResponsableTerritoireId(dto.responsableId())) {
-            throw new IllegalStateException("Ce commercial est déjà assigner a un territoire");
+            throw new IllegalStateException("Ce commercial est déjà assigné à un territoire");
         }
 
         territoire.setNom(dto.nom());
-        territoire.setPolygoneJson(dto.polygoneJson());
+        territoire.setPolygone(geoJsonToPolygon(dto.polygoneJson())); // ✅ conversion
         territoire.setResponsableTerritoire(commercial);
 
         territoire = territoireRepository.save(territoire);
@@ -87,7 +109,7 @@ public class TerritoireService {
         territoireRepository.deleteById(id);
     }
 
-
+    // Pagination & filtres
     public Page<TerritoireResponseDTO> getAllTerritoires(String nom, Long responsableId, Pageable pageable) {
         Page<Territoire> territoires;
 
@@ -103,5 +125,4 @@ public class TerritoireService {
 
         return territoires.map(this::mapResponseDTO);
     }
-    
 }
