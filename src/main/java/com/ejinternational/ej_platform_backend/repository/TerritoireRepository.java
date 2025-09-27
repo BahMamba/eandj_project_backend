@@ -15,4 +15,3 @@ public interface TerritoireRepository extends JpaRepository<Territoire, Long> {
 
     Page<Territoire> findByResponsableTerritoireId(Long responsableId, Pageable pageable);
 }
-
