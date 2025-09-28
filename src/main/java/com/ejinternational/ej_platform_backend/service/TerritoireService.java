@@ -48,7 +48,7 @@ public class TerritoireService {
             territoire.getId(),
             territoire.getNom(),
             polygonToGeoJson(territoire.getPolygone()), // ✅ conversion
-            territoire.getResponsableTerritoire().getId(),
+            territoire.getResponsableTerritoire() != null ? territoire.getResponsableTerritoire().getUsername() : "N/A",
             territoire.getCreatedAt(),
             territoire.getUpdatedAt()
         );

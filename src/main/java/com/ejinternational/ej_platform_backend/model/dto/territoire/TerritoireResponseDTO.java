@@ -6,7 +6,7 @@ public record TerritoireResponseDTO(
     Long id,
     String nom,
     String polygoneJson,
-    Long responsableId,
+    String responsable,
     LocalDateTime createdAt,
     LocalDateTime updatedAt
 ) {}
