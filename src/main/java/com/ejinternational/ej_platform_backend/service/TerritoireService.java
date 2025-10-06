@@ -48,9 +48,7 @@ public class TerritoireService {
             territoire.getId(),
             territoire.getNom(),
             polygonToGeoJson(territoire.getPolygone()), // ✅ conversion
-            territoire.getResponsableTerritoire() != null ? territoire.getResponsableTerritoire().getUsername() : "N/A",
-            territoire.getCreatedAt(),
-            territoire.getUpdatedAt()
+            territoire.getResponsableTerritoire() != null ? territoire.getResponsableTerritoire().getUsername() : "N/A"
         );
     }
 
@@ -65,7 +63,7 @@ public class TerritoireService {
 
         Territoire territoire = Territoire.builder()
                 .nom(dto.nom())
-                .polygone(geoJsonToPolygon(dto.polygoneJson())) // ✅ conversion
+                .polygone(geoJsonToPolygon(dto.polygoneJson()))
                 .responsableTerritoire(commercial)
                 .build();
 
@@ -87,7 +85,7 @@ public class TerritoireService {
         }
 
         territoire.setNom(dto.nom());
-        territoire.setPolygone(geoJsonToPolygon(dto.polygoneJson())); // ✅ conversion
+        territoire.setPolygone(geoJsonToPolygon(dto.polygoneJson()));
         territoire.setResponsableTerritoire(commercial);
 
         territoire = territoireRepository.save(territoire);
