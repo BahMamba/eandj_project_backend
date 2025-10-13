@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 public record TerritoireDTO(
     Long responsableId,
     @NotBlank String nom,
-    @NotBlank String polygoneJson,
-    @NotBlank String responsable
+    @NotBlank String polygoneJson
 ) {}
+
 
